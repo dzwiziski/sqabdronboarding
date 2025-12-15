@@ -11,7 +11,15 @@ const firebaseConfig = {
     appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
+// Check if Firebase config is properly set
+const isConfigValid = firebaseConfig.apiKey && firebaseConfig.projectId;
+
+if (!isConfigValid) {
+    console.error('Firebase configuration is missing. Please check your environment variables.');
+}
+
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const isFirebaseConfigured = isConfigValid;
 export default app;
