@@ -33,37 +33,23 @@ interface WeekCardProps {
 }
 
 const WeekCard: React.FC<WeekCardProps> = ({
-    weekData,
-    weekProgress,
-    flippedDays,
-    completedActivities,
-    evidence,
-    isDayComplete,
-    getDayProgress,
-    onFlip,
-    onToggleActivity,
-    onToggleAll,
-    onSaveEvidence,
-    onRemoveEvidence
+    weekData, weekProgress, flippedDays, completedActivities, evidence,
+    isDayComplete, getDayProgress, onFlip, onToggleActivity, onToggleAll, onSaveEvidence, onRemoveEvidence
 }) => {
     return (
-        <div className="bg-white rounded-xl p-4 border border-granite-blush/30 shadow-sm">
+        <div className="bg-slate-900 rounded-xl p-4 border border-slate-800">
             <div className="flex items-center justify-between mb-4">
                 <div>
-                    <div className="text-sm font-semibold text-charcoal">
-                        Week {weekData.week}
-                    </div>
-                    <div className="text-xs text-granite-blush">
-                        Days {weekData.days[0]}-{weekData.days[weekData.days.length - 1]}
-                    </div>
+                    <div className="text-sm font-semibold text-white">Week {weekData.week}</div>
+                    <div className="text-xs text-slate-400">Days {weekData.days[0]}-{weekData.days[weekData.days.length - 1]}</div>
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="text-right">
-                        <div className="text-xs text-granite-blush">{weekProgress.daysComplete}/{weekProgress.totalDays} days</div>
-                        <div className="text-[10px] text-granite-blush/70">{weekProgress.activitiesComplete}/{weekProgress.activitiesTotal} tasks</div>
+                        <div className="text-xs text-slate-400">{weekProgress.daysComplete}/{weekProgress.totalDays} days</div>
+                        <div className="text-[10px] text-slate-500">{weekProgress.activitiesComplete}/{weekProgress.activitiesTotal} tasks</div>
                     </div>
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold
-            ${weekProgress.daysComplete === weekProgress.totalDays ? 'bg-sage-brush text-white' : 'bg-bg-tertiary text-charcoal'}`}>
+            ${weekProgress.daysComplete === weekProgress.totalDays ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-300'}`}>
                         {weekProgress.daysComplete === weekProgress.totalDays ? <Check size={16} /> : `${weekProgress.percentage}%`}
                     </div>
                 </div>
@@ -72,23 +58,12 @@ const WeekCard: React.FC<WeekCardProps> = ({
                 {weekData.days.map((day) => {
                     const dayInfo = getDayInfo(day);
                     return (
-                        <FlipCard
-                            key={day}
-                            day={day}
-                            isFlipped={!!flippedDays[day]}
-                            dayInfo={dayInfo}
-                            phase={getPhase(day)}
-                            hasCert={certifications[day]}
-                            isCompleted={dayInfo ? isDayComplete(day, dayInfo.activities) : false}
+                        <FlipCard key={day} day={day} isFlipped={!!flippedDays[day]} dayInfo={dayInfo} phase={getPhase(day)}
+                            hasCert={certifications[day]} isCompleted={dayInfo ? isDayComplete(day, dayInfo.activities) : false}
                             progress={dayInfo ? getDayProgress(day, dayInfo.activities) : { completed: 0, total: 0, percentage: 0 }}
-                            completedActivities={completedActivities}
-                            evidence={evidence[day]}
-                            onFlip={onFlip}
-                            onToggleActivity={onToggleActivity}
-                            onToggleAll={onToggleAll}
-                            onSaveEvidence={onSaveEvidence}
-                            onRemoveEvidence={onRemoveEvidence}
-                        />
+                            completedActivities={completedActivities} evidence={evidence[day]} onFlip={onFlip}
+                            onToggleActivity={onToggleActivity} onToggleAll={onToggleAll}
+                            onSaveEvidence={onSaveEvidence} onRemoveEvidence={onRemoveEvidence} />
                     );
                 })}
             </div>

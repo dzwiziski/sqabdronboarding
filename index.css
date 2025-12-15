@@ -2,11 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Base styles - Light Theme */
+/* Base styles - Dark Theme */
 body {
   font-family: 'Inter', system-ui, sans-serif;
-  background-color: #FDFDFD;
-  color: #464646;
+  background-color: rgb(2 6 23);
+  /* slate-950 */
+  color: white;
 }
 
 /* Custom animation utilities */
@@ -56,21 +57,24 @@ body {
   }
 }
 
-/* Scrollbar styling for light theme */
+/* Scrollbar styling for dark theme */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #F0F0F0;
+  background: rgb(30 41 59);
+  /* slate-800 */
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #BCB0AF;
+  background: rgb(71 85 105);
+  /* slate-600 */
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #8C728B;
+  background: rgb(100 116 139);
+  /* slate-500 */
 }
