@@ -3,6 +3,7 @@ import { Users, TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, Cal
 import { getAllBDRs, getBDROnboardingData, setStartDate, UserProfile, BDROnboardingData } from '../services/firestoreService';
 import { getExpectedDay, getProgressStatus, getNextMonday, formatWeekRange } from '../utils/dateUtils';
 import AICoachingPanel from './AICoachingPanel';
+import WeeklySummaryPanel from './WeeklySummaryPanel';
 
 interface BDRWithProgress {
     id: string;
@@ -161,6 +162,9 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ onSelectBdr }) => {
 
     return (
         <div className="space-y-6">
+            {/* Weekly AI Summary */}
+            <WeeklySummaryPanel />
+
             {/* Start Date Modal */}
             {showStartDateModal && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
