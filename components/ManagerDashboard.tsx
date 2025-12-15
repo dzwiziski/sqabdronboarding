@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, Calendar, ChevronRight, BarChart3, Lightbulb, Play, X } from 'lucide-react';
 import { getAllBDRs, getBDROnboardingData, setStartDate, UserProfile, BDROnboardingData } from '../services/firestoreService';
 import { getExpectedDay, getProgressStatus, getNextMonday, formatWeekRange } from '../utils/dateUtils';
+import AICoachingPanel from './AICoachingPanel';
 
 interface BDRWithProgress {
     id: string;
@@ -303,10 +304,22 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ onSelectBdr }) => {
                                 </div>
 
                                 <div className="bg-slate-800/50 rounded-lg p-3">
-                                    <div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><Lightbulb size={12} /> Coaching Tip</div>
+                                    <div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><Lightbulb size={12} /> Quick Tip</div>
                                     <p className="text-xs text-slate-300">{getCoachingTip(bdr)}</p>
                                 </div>
                             </div>
+
+                            {/* AI Coaching Panel */}
+                            {bdr.status !== 'not-started' && (
+                                <AICoachingPanel bdr={{
+                                    name: bdr.profile.name,
+                                    completedDays: bdr.completedDays,
+                                    expectedDay: bdr.expectedDay,
+                                    daysOffset: bdr.daysOffset,
+                                    status: bdr.status,
+                                    progressPercentage: bdr.progressPercentage
+                                }} />
+                            )}
                         </div>
                     ))}
                 </div>
