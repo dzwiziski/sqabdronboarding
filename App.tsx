@@ -2,8 +2,34 @@ import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import BDROnboardingCalendar from './components/BDROnboardingCalendar';
 import Login from './components/Login';
-import OnboardingWizard from './components/OnboardingWizard';
 import { getBDROnboardingData } from './services/firestoreService';
+import { Calendar, Clock } from 'lucide-react';
+
+const WaitingForStartDate: React.FC<{ userName: string; onSignOut: () => void }> = ({ userName, onSignOut }) => (
+  <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+    <div className="text-center max-w-md">
+      <div className="w-20 h-20 bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-6">
+        <Clock size={40} className="text-blue-400" />
+      </div>
+      <h1 className="text-2xl font-bold text-white mb-2">Welcome, {userName}!</h1>
+      <p className="text-slate-400 mb-6">
+        Your manager will set your onboarding start date. Once that's done, you'll see your personalized 90-day calendar here.
+      </p>
+      <div className="bg-slate-900 rounded-xl border border-slate-700 p-4 mb-6">
+        <div className="flex items-center gap-3 text-left">
+          <Calendar size={20} className="text-slate-500" />
+          <div>
+            <div className="text-sm font-medium text-slate-300">Start date pending</div>
+            <div className="text-xs text-slate-500">Check back soon or contact your manager</div>
+          </div>
+        </div>
+      </div>
+      <button onClick={onSignOut} className="text-slate-400 hover:text-white text-sm transition-colors">
+        Sign Out
+      </button>
+    </div>
+  </div>
+);
 
 const AppContent: React.FC = () => {
   const { user, userProfile, loading, signOut } = useAuth();
@@ -12,7 +38,6 @@ const AppContent: React.FC = () => {
   const [hasStartDate, setHasStartDate] = useState<boolean | null>(null);
   const [checkingStartDate, setCheckingStartDate] = useState(false);
 
-  // Check if BDR has set their start date
   useEffect(() => {
     const checkStartDate = async () => {
       if (user && userProfile?.role === 'bdr') {
@@ -22,7 +47,7 @@ const AppContent: React.FC = () => {
           setHasStartDate(!!data?.startDate);
         } catch (error) {
           console.error('Error checking start date:', error);
-          setHasStartDate(true); // Assume they have one to avoid blocking
+          setHasStartDate(false);
         } finally {
           setCheckingStartDate(false);
         }
@@ -46,15 +71,9 @@ const AppContent: React.FC = () => {
     return <Login />;
   }
 
-  // Show onboarding wizard for BDRs who haven't set start date
+  // BDR without start date - show waiting message
   if (userProfile.role === 'bdr' && hasStartDate === false) {
-    return (
-      <OnboardingWizard
-        userId={user.uid}
-        userName={userProfile.name}
-        onComplete={() => setHasStartDate(true)}
-      />
-    );
+    return <WaitingForStartDate userName={userProfile.name} onSignOut={signOut} />;
   }
 
   const targetBdrId = userProfile.role === 'manager' ? selectedBdrId : user.uid;
