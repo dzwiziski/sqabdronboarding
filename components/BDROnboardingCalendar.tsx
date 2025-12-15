@@ -12,6 +12,7 @@ import ManagerGuide from './ManagerGuide';
 import BDRSelector from './BDRSelector';
 import ManagerDashboard from './ManagerDashboard';
 import CallReviewPanel from './CallReviewPanel';
+import DailyAdvisor from './DailyAdvisor';
 
 interface BDROnboardingCalendarProps {
   userId: string;
@@ -230,6 +231,21 @@ const BDROnboardingCalendar: React.FC<BDROnboardingCalendarProps> = ({
 
         {view === 'calendar' ? (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Daily Advisor for BDRs */}
+            {!isManager && (
+              <DailyAdvisor
+                bdr={{
+                  name: userProfile.name,
+                  completedDays: Object.keys(completedActivities).filter(k => completedActivities[k]).length,
+                  expectedDay: currentWeek * 5,
+                  daysOffset: 0,
+                  status: 'on-track',
+                  progressPercentage: overallProgress
+                }}
+                currentWeek={currentWeek}
+              />
+            )}
+
             <ProgressOverview overallProgress={overallProgress} phaseProgress={phaseProgress} phases={phases} />
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
