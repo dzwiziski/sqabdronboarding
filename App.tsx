@@ -77,8 +77,10 @@ const AppContent: React.FC = () => {
     return <WaitingForStartDate userName={userProfile.name} onSignOut={signOut} />;
   }
 
-  // Superadmin view
+  // Superadmin view - has access to everything
   if (userProfile.role === 'superadmin') {
+    const [superadminView, setSuperadminView] = useState<'users' | 'dashboard'>('users');
+
     return (
       <div className="min-h-screen bg-slate-950 text-white p-6">
         <div className="max-w-7xl mx-auto">
@@ -86,7 +88,34 @@ const AppContent: React.FC = () => {
             <h1 className="text-3xl font-bold">Superadmin Panel</h1>
             <button onClick={signOut} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors">Sign Out</button>
           </div>
-          <SuperadminDashboard />
+
+          {/* Tab Navigation */}
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={() => setSuperadminView('users')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${superadminView === 'users' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
+            >
+              User Management
+            </button>
+            <button
+              onClick={() => setSuperadminView('dashboard')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${superadminView === 'dashboard' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
+            >
+              Manager Dashboard
+            </button>
+          </div>
+
+          {/* Content */}
+          {superadminView === 'users' ? (
+            <SuperadminDashboard />
+          ) : (
+            <BDROnboardingCalendar
+              userRole="manager"
+              userId={user.uid}
+              selectedBdrId={selectedBdrId}
+              onBdrSelect={setSelectedBdrId}
+            />
+          )}
         </div>
       </div>
     );
