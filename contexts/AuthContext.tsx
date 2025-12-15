@@ -4,7 +4,9 @@ import {
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
     signOut as firebaseSignOut,
-    onAuthStateChanged
+    onAuthStateChanged,
+    GoogleAuthProvider,
+    signInWithPopup
 } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import { getUserProfile, createUserProfile, UserProfile } from '../services/firestoreService';
@@ -15,6 +17,7 @@ interface AuthContextType {
     loading: boolean;
     signIn: (email: string, password: string) => Promise<void>;
     signUp: (email: string, password: string, name: string, role: 'bdr' | 'manager') => Promise<void>;
+    signInWithGoogle: (role: 'bdr' | 'manager') => Promise<void>;
     signOut: () => Promise<void>;
 }
 
@@ -67,6 +70,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUserProfile(profile);
     };
 
+    const signInWithGoogle = async (role: 'bdr' | 'manager') => {
+        const provider = new GoogleAuthProvider();
+        const result = await signInWithPopup(auth, provider);
+
+        // Check if user profile exists
+        let profile = await getUserProfile(result.user.uid);
+
+        if (!profile) {
+            // Create profile for new Google users
+            const displayName = result.user.displayName || result.user.email?.split('@')[0] || 'User';
+            await createUserProfile(result.user.uid, result.user.email || '', displayName, role, null);
+            profile = await getUserProfile(result.user.uid);
+        }
+
+        setUserProfile(profile);
+    };
+
     const signOut = async () => {
         await firebaseSignOut(auth);
         setUserProfile(null);
@@ -78,6 +98,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         loading,
         signIn,
         signUp,
+        signInWithGoogle,
         signOut
     };
 
