@@ -200,6 +200,89 @@ Return ONLY JSON (no markdown):
     throw new Error('Invalid response format');
 }
 
+export type RoleplayScenario = 'cold-call' | 'discovery' | 'objection' | 'closing';
+
+export interface RoleplayMessage {
+    role: 'user' | 'prospect';
+    content: string;
+}
+
+const SCENARIO_PROMPTS: Record<RoleplayScenario, string> = {
+    'cold-call': `You are a busy VP of Sales at a mid-market SaaS company. A BDR is cold calling you. 
+Be realistic - you're skeptical but not rude. You have limited time. 
+Ask about their company if the pitch is good. Push back on vague claims.
+If they handle objections well, show some interest in a follow-up.`,
+
+    'discovery': `You are a Director of Operations who agreed to a discovery call.
+You have real pain points around efficiency and cost. Share them if asked good questions.
+Be slightly guarded at first. Open up more if the BDR asks thoughtful questions.
+Don't volunteer information - make them work for it through good questioning.`,
+
+    'objection': `You are an interested prospect but have concerns: budget constraints, timing issues, and a competitor relationship.
+Raise these objections naturally throughout the conversation.
+If the BDR handles them well with specifics, start to soften.
+If they give generic responses, push back harder.`,
+
+    'closing': `You are a prospect who has done discovery and a demo. You're 70% convinced.
+You need to get approval from your CFO. You're worried about implementation time.
+If the BDR helps you build a business case and addresses concerns, commit to next steps.
+Don't make it easy - make them earn the commitment.`
+};
+
+export async function roleplayChat(
+    scenario: RoleplayScenario,
+    conversationHistory: RoleplayMessage[],
+    userMessage: string
+): Promise<string> {
+    const scenarioPrompt = SCENARIO_PROMPTS[scenario];
+
+    const systemPrompt = `${scenarioPrompt}
+
+IMPORTANT RULES:
+- Stay in character as the prospect throughout
+- Keep responses concise (2-4 sentences max)
+- React realistically to what the BDR says
+- Don't give coaching feedback during the conversation
+- Just respond as the prospect would`;
+
+    const historyContext = conversationHistory.map(m =>
+        `${m.role === 'user' ? 'BDR' : 'Prospect'}: ${m.content}`
+    ).join('\n');
+
+    const userPrompt = `Previous conversation:
+${historyContext}
+
+BDR: ${userMessage}
+
+Respond as the prospect (2-4 sentences, stay in character):`;
+
+    return await callLLM(userPrompt, systemPrompt);
+}
+
+export async function getRoleplayFeedback(
+    scenario: RoleplayScenario,
+    conversation: RoleplayMessage[]
+): Promise<{ score: number; strengths: string[]; improvements: string[]; tips: string[] }> {
+    const systemPrompt = `You are a sales coach analyzing a practice roleplay session.`;
+
+    const convoText = conversation.map(m =>
+        `${m.role === 'user' ? 'BDR' : 'Prospect'}: ${m.content}`
+    ).join('\n');
+
+    const userPrompt = `Analyze this ${scenario} roleplay practice:
+
+${convoText}
+
+Provide feedback. Return ONLY JSON (no markdown):
+{"score": 1-10, "strengths": ["strength 1", "strength 2"], "improvements": ["area 1", "area 2"], "tips": ["specific tip 1", "specific tip 2"]}`;
+
+    const response = await callLLM(userPrompt, systemPrompt);
+    const jsonStr = parseJSONResponse(response);
+    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+    if (jsonMatch) return JSON.parse(jsonMatch[0]);
+    throw new Error('Invalid response format');
+}
+
 export function isAIConfigured(): boolean {
     return !!(GEMINI_API_KEY || OPENAI_API_KEY);
 }

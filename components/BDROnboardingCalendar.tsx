@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Target, Users, Phone, CheckCircle, Calendar as CalendarIcon, BookOpen, LogOut, LayoutDashboard, Mic } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Target, Users, Phone, CheckCircle, Calendar as CalendarIcon, BookOpen, LogOut, LayoutDashboard, Mic, MessageSquare } from 'lucide-react';
 import { certifications, phases, activityTargets } from '../data';
 import { ActivityState, CertificationEvidence } from '../types';
 import { useProgress } from '../hooks';
@@ -13,6 +13,7 @@ import BDRSelector from './BDRSelector';
 import ManagerDashboard from './ManagerDashboard';
 import CallReviewPanel from './CallReviewPanel';
 import DailyAdvisor from './DailyAdvisor';
+import RoleplayBot from './RoleplayBot';
 
 interface BDROnboardingCalendarProps {
   userId: string;
@@ -26,7 +27,7 @@ interface BDROnboardingCalendarProps {
 const BDROnboardingCalendar: React.FC<BDROnboardingCalendarProps> = ({
   userId, userProfile, targetBdrId, targetBdrName, onSelectBdr, onSignOut
 }) => {
-  const [view, setView] = useState<'calendar' | 'guide' | 'dashboard' | 'calls'>(userProfile.role === 'manager' ? 'dashboard' : 'calendar');
+  const [view, setView] = useState<'calendar' | 'guide' | 'dashboard' | 'calls' | 'practice'>(userProfile.role === 'manager' ? 'dashboard' : 'calendar');
   const [flippedDays, setFlippedDays] = useState<Record<number, boolean>>({});
   const [currentWeek, setCurrentWeek] = useState(1);
   const [completedActivities, setCompletedActivities] = useState<ActivityState>({});
@@ -217,6 +218,10 @@ const BDROnboardingCalendar: React.FC<BDROnboardingCalendarProps> = ({
                 className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${view === 'calls' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
                 <Mic size={16} /> Calls
               </button>
+              <button onClick={() => setView('practice')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${view === 'practice' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                <MessageSquare size={16} /> Practice
+              </button>
               <button onClick={() => setView('guide')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${view === 'guide' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
                 <BookOpen size={16} /> Guide
@@ -323,6 +328,8 @@ const BDROnboardingCalendar: React.FC<BDROnboardingCalendarProps> = ({
           <ManagerDashboard onSelectBdr={(id, name) => { onSelectBdr(id, name); setView('calendar'); }} />
         ) : view === 'calls' ? (
           <CallReviewPanel />
+        ) : view === 'practice' ? (
+          <RoleplayBot />
         ) : (
           <ManagerGuide
             userId={userId}
