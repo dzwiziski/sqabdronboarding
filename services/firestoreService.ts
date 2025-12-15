@@ -4,6 +4,7 @@ import {
     getDoc,
     setDoc,
     updateDoc,
+    deleteDoc,
     collection,
     query,
     where,
@@ -17,7 +18,7 @@ import { ActivityState, CertificationEvidence } from '../types';
 export interface UserProfile {
     email: string;
     name: string;
-    role: 'bdr' | 'manager';
+    role: 'bdr' | 'manager' | 'superadmin';
     managerId: string | null;
     createdAt: Timestamp;
 }
@@ -43,7 +44,7 @@ export async function createUserProfile(
     userId: string,
     email: string,
     name: string,
-    role: 'bdr' | 'manager',
+    role: 'bdr' | 'manager' | 'superadmin',
     managerId: string | null = null
 ): Promise<void> {
     const userRef = doc(db, 'users', userId);
@@ -60,6 +61,25 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     const userRef = doc(db, 'users', userId);
     const userSnap = await getDoc(userRef);
     return userSnap.exists() ? (userSnap.data() as UserProfile) : null;
+}
+
+export async function updateUserProfile(
+    userId: string,
+    updates: { name?: string; role?: 'bdr' | 'manager' | 'superadmin'; managerId?: string | null }
+): Promise<void> {
+    const userRef = doc(db, 'users', userId);
+    await updateDoc(userRef, updates);
+}
+
+export async function deleteUserProfile(userId: string): Promise<void> {
+    const userRef = doc(db, 'users', userId);
+    await deleteDoc(userRef);
+}
+
+export async function getAllUsers(): Promise<{ id: string; profile: UserProfile }[]> {
+    const usersRef = collection(db, 'users');
+    const snapshot = await getDocs(usersRef);
+    return snapshot.docs.map(doc => ({ id: doc.id, profile: doc.data() as UserProfile }));
 }
 
 export async function getBDRsForManager(managerId: string): Promise<{ id: string; profile: UserProfile }[]> {

@@ -16,8 +16,9 @@ interface AuthContextType {
     userProfile: UserProfile | null;
     loading: boolean;
     signIn: (email: string, password: string) => Promise<void>;
-    signUp: (email: string, password: string, name: string, role: 'bdr' | 'manager') => Promise<void>;
-    signInWithGoogle: (role: 'bdr' | 'manager') => Promise<void>;
+    signUp: (email: string, password: string, name: string, role: 'bdr' | 'manager' | 'superadmin') => Promise<void>;
+    signInWithGoogle: (role: 'bdr' | 'manager' | 'superadmin') => Promise<void>;
+    createUserAsAdmin: (email: string, password: string, name: string, role: 'bdr' | 'manager', managerId?: string | null) => Promise<void>;
     signOut: () => Promise<void>;
 }
 
@@ -63,14 +64,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUserProfile(profile);
     };
 
-    const signUp = async (email: string, password: string, name: string, role: 'bdr' | 'manager') => {
+    const signUp = async (email: string, password: string, name: string, role: 'bdr' | 'manager' | 'superadmin') => {
         const result = await createUserWithEmailAndPassword(auth, email, password);
         await createUserProfile(result.user.uid, email, name, role, null);
         const profile = await getUserProfile(result.user.uid);
         setUserProfile(profile);
     };
 
-    const signInWithGoogle = async (role: 'bdr' | 'manager') => {
+    const signInWithGoogle = async (role: 'bdr' | 'manager' | 'superadmin') => {
         const provider = new GoogleAuthProvider();
         const result = await signInWithPopup(auth, provider);
 
@@ -87,6 +88,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUserProfile(profile);
     };
 
+    const createUserAsAdmin = async (email: string, password: string, name: string, role: 'bdr' | 'manager', managerId: string | null = null) => {
+        // This creates a user without signing in as them
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        await createUserProfile(result.user.uid, email, name, role, managerId);
+        // Sign out the newly created user immediately so admin stays logged in
+        await firebaseSignOut(auth);
+    };
+
     const signOut = async () => {
         await firebaseSignOut(auth);
         setUserProfile(null);
@@ -99,6 +108,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         signIn,
         signUp,
         signInWithGoogle,
+        createUserAsAdmin,
         signOut
     };
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import BDROnboardingCalendar from './components/BDROnboardingCalendar';
+import SuperadminDashboard from './components/SuperadminDashboard';
 import Login from './components/Login';
 import { getBDROnboardingData } from './services/firestoreService';
 import { Calendar, Clock } from 'lucide-react';
@@ -74,6 +75,21 @@ const AppContent: React.FC = () => {
   // BDR without start date - show waiting message
   if (userProfile.role === 'bdr' && hasStartDate === false) {
     return <WaitingForStartDate userName={userProfile.name} onSignOut={signOut} />;
+  }
+
+  // Superadmin view
+  if (userProfile.role === 'superadmin') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl font-bold">Superadmin Panel</h1>
+            <button onClick={signOut} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors">Sign Out</button>
+          </div>
+          <SuperadminDashboard />
+        </div>
+      </div>
+    );
   }
 
   const targetBdrId = userProfile.role === 'manager' ? selectedBdrId : user.uid;
