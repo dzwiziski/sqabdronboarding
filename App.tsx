@@ -23,9 +23,7 @@ const AppContent: React.FC = () => {
     return <Login />;
   }
 
-  // For managers, pass the selected BDR ID; for BDRs, use their own ID
   const targetBdrId = userProfile.role === 'manager' ? selectedBdrId : user.uid;
-  const isViewingOwnCalendar = userProfile.role === 'bdr' || (userProfile.role === 'manager' && selectedBdrId === user.uid);
 
   return (
     <BDROnboardingCalendar
@@ -39,13 +37,55 @@ const AppContent: React.FC = () => {
   );
 };
 
+// Error boundary to catch crashes
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: string }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: '' };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error: error.message };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('App Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+          <div className="text-center max-w-md">
+            <div className="text-6xl mb-4">⚠️</div>
+            <h1 className="text-xl font-bold text-white mb-2">Something went wrong</h1>
+            <p className="text-slate-400 mb-4">{this.state.error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg"
+            >
+              Reload Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <div className="min-h-screen bg-slate-950">
-        <AppContent />
-      </div>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <div className="min-h-screen bg-slate-950">
+          <AppContent />
+        </div>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 };
 
