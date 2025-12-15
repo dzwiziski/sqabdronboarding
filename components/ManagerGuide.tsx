@@ -1,36 +1,82 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Users, Target, CheckCircle, MessageSquare, Calendar, Phone, Award, TrendingUp, AlertTriangle, Lightbulb, Shield, ChevronLeft, ChevronRight, Save, Check, CalendarDays, FileText } from 'lucide-react';
+import { getManagerNotes, saveManagerNotes } from '../services/firestoreService';
 
 const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-const ManagerGuide: React.FC = () => {
+interface ManagerGuideProps {
+  userId: string;
+  targetBdrId: string;
+  isManager: boolean;
+}
+
+const ManagerGuide: React.FC<ManagerGuideProps> = ({ userId, targetBdrId, isManager }) => {
   const [currentTrackingWeek, setCurrentTrackingWeek] = useState(1);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
   const [dailyNotes, setDailyNotes] = useState<Record<string, string>>({});
   const [weeklySummary, setWeeklySummary] = useState<Record<string, string>>({});
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
+  // Load notes from Firestore (scoped by BDR for managers)
   useEffect(() => {
-    const savedData = localStorage.getItem('bdr-manager-tracker');
-    if (savedData) {
+    const loadNotes = async () => {
+      if (!targetBdrId) { setLoading(false); return; }
+      setLoading(true);
       try {
-        const parsed = JSON.parse(savedData);
-        setChecklist(parsed.checklist || {});
-        setDailyNotes(parsed.dailyNotes || {});
-        setWeeklySummary(parsed.weeklySummary || parsed.notes || {});
-      } catch (e) { console.error("Failed to parse manager data", e); }
+        const data = await getManagerNotes(userId, targetBdrId);
+        if (data) {
+          setChecklist(data.checklist || {});
+          setDailyNotes(data.dailyNotes || {});
+          setWeeklySummary(data.weeklySummary || {});
+        } else {
+          setChecklist({});
+          setDailyNotes({});
+          setWeeklySummary({});
+        }
+      } catch (error) {
+        console.error('Error loading manager notes:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadNotes();
+  }, [userId, targetBdrId]);
+
+  // Save to Firestore
+  const saveToFirestore = useCallback(async (newChecklist: Record<string, boolean>, newDailyNotes: Record<string, string>, newWeeklySummary: Record<string, string>) => {
+    if (!targetBdrId) return;
+    setSaving(true);
+    try {
+      await saveManagerNotes(userId, targetBdrId, { checklist: newChecklist, dailyNotes: newDailyNotes, weeklySummary: newWeeklySummary });
+      setShowSaveConfirm(true);
+      setTimeout(() => setShowSaveConfirm(false), 2000);
+    } catch (error) {
+      console.error('Error saving manager notes:', error);
+    } finally {
+      setSaving(false);
     }
-  }, []);
+  }, [userId, targetBdrId]);
 
-  useEffect(() => {
-    localStorage.setItem('bdr-manager-tracker', JSON.stringify({ checklist, dailyNotes, weeklySummary }));
-  }, [checklist, dailyNotes, weeklySummary]);
+  const toggleCheck = async (id: string) => {
+    const newChecklist = { ...checklist, [id]: !checklist[id] };
+    setChecklist(newChecklist);
+    await saveToFirestore(newChecklist, dailyNotes, weeklySummary);
+  };
 
-  const toggleCheck = (id: string) => setChecklist(prev => ({ ...prev, [id]: !prev[id] }));
-  const handleDailyNoteChange = (week: number, day: number, value: string) => setDailyNotes(prev => ({ ...prev, [`w${week}_d${day}`]: value }));
-  const handleWeeklySummaryChange = (week: number, value: string) => setWeeklySummary(prev => ({ ...prev, [week.toString()]: value }));
-  const handleManualSave = () => { localStorage.setItem('bdr-manager-tracker', JSON.stringify({ checklist, dailyNotes, weeklySummary })); setShowSaveConfirm(true); setTimeout(() => setShowSaveConfirm(false), 2000); };
+  const handleDailyNoteChange = (week: number, day: number, value: string) => {
+    setDailyNotes(prev => ({ ...prev, [`w${week}_d${day}`]: value }));
+  };
+
+  const handleWeeklySummaryChange = (week: number, value: string) => {
+    setWeeklySummary(prev => ({ ...prev, [week.toString()]: value }));
+  };
+
+  const handleManualSave = async () => {
+    await saveToFirestore(checklist, dailyNotes, weeklySummary);
+  };
 
   const weeklyAggregatedNotes = useMemo(() => DAYS_OF_WEEK.map((d, i) => dailyNotes[`w${currentTrackingWeek}_d${i}`]?.trim() ? `**${d}:**\n${dailyNotes[`w${currentTrackingWeek}_d${i}`]}` : '').filter(Boolean).join('\n\n'), [currentTrackingWeek, dailyNotes]);
   const dailyNotesCount = useMemo(() => DAYS_OF_WEEK.filter((_, i) => dailyNotes[`w${currentTrackingWeek}_d${i}`]?.trim()).length, [currentTrackingWeek, dailyNotes]);
@@ -41,6 +87,14 @@ const ManagerGuide: React.FC = () => {
     { id: 'call_review', label: 'Call Reviews' }, { id: 'roleplay', label: 'Skill Roleplay' },
   ];
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
       {/* Coaching Tracker */}
@@ -48,7 +102,10 @@ const ManagerGuide: React.FC = () => {
         <div className="bg-slate-800 p-4 border-b border-slate-700 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-600 rounded-lg"><Users className="text-white" size={20} /></div>
-            <div><h2 className="text-lg font-bold text-white">Coaching Tracker</h2><p className="text-xs text-slate-400">Track your rhythms & document feedback</p></div>
+            <div>
+              <h2 className="text-lg font-bold text-white">Coaching Tracker</h2>
+              <p className="text-xs text-slate-400">Track rhythms & document feedback {saving && '• Saving...'}</p>
+            </div>
           </div>
           <div className="flex items-center gap-4 bg-slate-900/50 p-1.5 rounded-lg border border-slate-700">
             <button onClick={() => setCurrentTrackingWeek(Math.max(1, currentTrackingWeek - 1))} disabled={currentTrackingWeek <= 1} className="p-1 hover:bg-slate-700 rounded disabled:opacity-30"><ChevronLeft size={18} className="text-slate-300" /></button>
@@ -98,24 +155,24 @@ const ManagerGuide: React.FC = () => {
             {selectedDay === null ? (
               <div className="flex-1 flex flex-col">
                 {weeklyAggregatedNotes && <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-3 mb-3 max-h-32 overflow-y-auto"><div className="text-[10px] uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1"><CalendarDays size={10} /> Daily Notes Roll-up</div><div className="text-xs text-slate-300 whitespace-pre-wrap">{weeklyAggregatedNotes}</div></div>}
-                <textarea value={weeklySummary[currentTrackingWeek] || ''} onChange={(e) => handleWeeklySummaryChange(currentTrackingWeek, e.target.value)} placeholder={`Week ${currentTrackingWeek} Summary:\n• Key wins and progress made\n• Areas needing attention...`} className="flex-1 bg-slate-800 border border-slate-700 rounded-lg p-4 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500 resize-none min-h-[140px]" />
+                <textarea value={weeklySummary[currentTrackingWeek] || ''} onChange={(e) => handleWeeklySummaryChange(currentTrackingWeek, e.target.value)} placeholder={`Week ${currentTrackingWeek} Summary...`} className="flex-1 bg-slate-800 border border-slate-700 rounded-lg p-4 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500 resize-none min-h-[140px]" />
               </div>
             ) : (
-              <textarea value={dailyNotes[`w${currentTrackingWeek}_d${selectedDay}`] || ''} onChange={(e) => handleDailyNoteChange(currentTrackingWeek, selectedDay, e.target.value)} placeholder={`${DAYS_OF_WEEK[selectedDay]} notes:\n• Coaching moments\n• Key observations...`} className="flex-1 bg-slate-800 border border-slate-700 rounded-lg p-4 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 resize-none min-h-[200px]" />
+              <textarea value={dailyNotes[`w${currentTrackingWeek}_d${selectedDay}`] || ''} onChange={(e) => handleDailyNoteChange(currentTrackingWeek, selectedDay, e.target.value)} placeholder={`${DAYS_OF_WEEK[selectedDay]} notes...`} className="flex-1 bg-slate-800 border border-slate-700 rounded-lg p-4 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 resize-none min-h-[200px]" />
             )}
-            <div className="mt-2 flex justify-end"><button onClick={handleManualSave} className="text-xs flex items-center gap-1 text-slate-400 hover:text-white"><Save size={14} /> Save Notes</button></div>
+            <div className="mt-2 flex justify-end"><button onClick={handleManualSave} disabled={saving} className="text-xs flex items-center gap-1 text-slate-400 hover:text-white disabled:opacity-50"><Save size={14} /> Save Notes</button></div>
           </div>
         </div>
       </div>
 
-      {/* Reference Sections */}
+      {/* Reference Sections - unchanged from before */}
       <div className="grid md:grid-cols-2 gap-6">
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
           <div className="flex items-center gap-3 mb-4"><div className="p-2 bg-blue-500/20 rounded-lg"><Shield className="text-blue-400" size={24} /></div><h3 className="text-xl font-semibold text-white">Core Responsibilities</h3></div>
           <ul className="space-y-4">
             <li className="flex gap-3"><Target className="text-blue-400 flex-shrink-0 mt-1" size={18} /><div><strong className="text-white">Skill Development</strong><p className="text-slate-400 text-sm">Master cold calling, email writing, SPICED qualification.</p></div></li>
             <li className="flex gap-3"><TrendingUp className="text-blue-400 flex-shrink-0 mt-1" size={18} /><div><strong className="text-white">Activity Management</strong><p className="text-slate-400 text-sm">Ensure 10-15 quality touches daily.</p></div></li>
-            <li className="flex gap-3"><CheckCircle className="text-blue-400 flex-shrink-0 mt-1" size={18} /><div><strong className="text-white">Quality Assurance</strong><p className="text-slate-400 text-sm">Review calls and emails for quality over quantity.</p></div></li>
+            <li className="flex gap-3"><CheckCircle className="text-blue-400 flex-shrink-0 mt-1" size={18} /><div><strong className="text-white">Quality Assurance</strong><p className="text-slate-400 text-sm">Review calls and emails for quality.</p></div></li>
           </ul>
         </div>
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
@@ -157,16 +214,6 @@ const ManagerGuide: React.FC = () => {
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
           <div className="flex items-center gap-3 mb-4"><div className="p-2 bg-blue-500/20 rounded-lg"><Lightbulb className="text-blue-400" size={24} /></div><h3 className="text-xl font-semibold text-white">Intervention Strategies</h3></div>
           <ul className="space-y-2 text-sm text-slate-300"><li><strong>Diagnose:</strong> Skill, Will, or Process?</li><li><strong>Frequency:</strong> Daily call reviews</li><li><strong>Focus:</strong> Narrow to one industry</li></ul>
-        </div>
-      </div>
-
-      {/* Roadmap */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-        <h3 className="text-xl font-semibold text-white mb-6">Manager Roadmap</h3>
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="pl-4 border-l-2 border-blue-500"><div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-blue-500"></div><h4 className="font-bold text-white mb-1">Month 1: Foundation</h4><p className="text-sm text-slate-400">Build trust, heavy shadowing</p></div>
-          <div className="pl-4 border-l-2 border-indigo-500"><h4 className="font-bold text-white mb-1">Month 2: Accountability</h4><p className="text-sm text-slate-400">Daily goals, 4 meetings by Day 60</p></div>
-          <div className="pl-4 border-l-2 border-emerald-500"><h4 className="font-bold text-white mb-1">Month 3: Strategic</h4><p className="text-sm text-slate-400">Independence, 6+ meetings</p></div>
         </div>
       </div>
     </div>

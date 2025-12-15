@@ -1,68 +1,150 @@
-import React, { useState, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, Target, Users, Phone, CheckCircle, Calendar as CalendarIcon, BookOpen } from 'lucide-react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Target, Users, Phone, CheckCircle, Calendar as CalendarIcon, BookOpen, LogOut } from 'lucide-react';
 import { certifications, phases, activityTargets } from '../data';
 import { ActivityState, CertificationEvidence } from '../types';
-import { useLocalStorage, useProgress } from '../hooks';
+import { useProgress } from '../hooks';
+import { UserProfile } from '../services/firestoreService';
+import { getBDROnboardingData, updateCompletedActivities, updateEvidence } from '../services/firestoreService';
 import ProgressOverview from './ProgressOverview';
 import WeekCard from './WeekCard';
 import CertificationTimeline from './CertificationTimeline';
 import ManagerGuide from './ManagerGuide';
+import BDRSelector from './BDRSelector';
 
-const BDROnboardingCalendar: React.FC = () => {
+interface BDROnboardingCalendarProps {
+  userId: string;
+  userProfile: UserProfile;
+  targetBdrId: string | null;
+  targetBdrName: string;
+  onSelectBdr: (id: string, name: string) => void;
+  onSignOut: () => void;
+}
+
+const BDROnboardingCalendar: React.FC<BDROnboardingCalendarProps> = ({
+  userId, userProfile, targetBdrId, targetBdrName, onSelectBdr, onSignOut
+}) => {
   const [view, setView] = useState<'calendar' | 'guide'>('calendar');
   const [flippedDays, setFlippedDays] = useState<Record<number, boolean>>({});
   const [currentWeek, setCurrentWeek] = useState(1);
+  const [completedActivities, setCompletedActivities] = useState<ActivityState>({});
+  const [evidence, setEvidence] = useState<Record<string, CertificationEvidence>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const [completedActivities, setCompletedActivities, clearActivities] = useLocalStorage<ActivityState>(
-    'bdr-onboarding-activities',
-    {}
-  );
-  const [evidence, setEvidence, clearEvidence] = useLocalStorage<Record<string, CertificationEvidence>>(
-    'bdr-onboarding-evidence',
-    {}
-  );
+  const isManager = userProfile.role === 'manager';
+  const effectiveBdrId = isManager ? targetBdrId : userId;
+
+  // Load data from Firestore
+  useEffect(() => {
+    const loadData = async () => {
+      if (!effectiveBdrId) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const data = await getBDROnboardingData(effectiveBdrId);
+        if (data) {
+          setCompletedActivities(data.completedActivities || {});
+          setEvidence(data.evidence || {});
+        } else {
+          setCompletedActivities({});
+          setEvidence({});
+        }
+      } catch (error) {
+        console.error('Error loading onboarding data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, [effectiveBdrId]);
 
   const { isDayComplete, getDayProgress, overallProgress, phaseProgress, getWeekProgress } = useProgress({
-    completedActivities,
-    phases
+    completedActivities, phases
   });
 
   const toggleFlip = useCallback((day: number) => {
     setFlippedDays(prev => ({ ...prev, [day]: !prev[day] }));
   }, []);
 
-  const toggleActivity = useCallback((day: number, activityIndex: number, e: React.MouseEvent) => {
+  const toggleActivity = useCallback(async (day: number, activityIndex: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    setCompletedActivities(prev => ({ ...prev, [`${day}-${activityIndex}`]: !prev[`${day}-${activityIndex}`] }));
-  }, [setCompletedActivities]);
+    if (!effectiveBdrId) return;
 
-  const toggleAllActivities = useCallback((day: number, activities: string[], e: React.MouseEvent) => {
+    const key = `${day}-${activityIndex}`;
+    const newActivities = { ...completedActivities, [key]: !completedActivities[key] };
+    setCompletedActivities(newActivities);
+
+    // Save to Firestore
+    setSaving(true);
+    try {
+      await updateCompletedActivities(effectiveBdrId, newActivities);
+    } catch (error) {
+      console.error('Error saving activity:', error);
+    } finally {
+      setSaving(false);
+    }
+  }, [completedActivities, effectiveBdrId]);
+
+  const toggleAllActivities = useCallback(async (day: number, activities: string[], e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!effectiveBdrId) return;
+
     const allCompleted = activities.every((_, idx) => completedActivities[`${day}-${idx}`]);
     const updates: ActivityState = {};
     activities.forEach((_, idx) => { updates[`${day}-${idx}`] = !allCompleted; });
-    setCompletedActivities(prev => ({ ...prev, ...updates }));
-  }, [completedActivities, setCompletedActivities]);
+    const newActivities = { ...completedActivities, ...updates };
+    setCompletedActivities(newActivities);
 
-  const handleSaveEvidence = useCallback((day: number, newEvidence: CertificationEvidence) => {
-    setEvidence(prev => ({ ...prev, [day]: newEvidence }));
-  }, [setEvidence]);
+    setSaving(true);
+    try {
+      await updateCompletedActivities(effectiveBdrId, newActivities);
+    } catch (error) {
+      console.error('Error saving activities:', error);
+    } finally {
+      setSaving(false);
+    }
+  }, [completedActivities, effectiveBdrId]);
 
-  const handleRemoveEvidence = useCallback((day: number) => {
-    setEvidence(prev => { const newState = { ...prev }; delete newState[day]; return newState; });
-  }, [setEvidence]);
+  const handleSaveEvidence = useCallback(async (day: number, newEvidence: CertificationEvidence) => {
+    if (!effectiveBdrId) return;
+
+    const newEvidenceState = { ...evidence, [day]: newEvidence };
+    setEvidence(newEvidenceState);
+
+    setSaving(true);
+    try {
+      await updateEvidence(effectiveBdrId, newEvidenceState);
+    } catch (error) {
+      console.error('Error saving evidence:', error);
+    } finally {
+      setSaving(false);
+    }
+  }, [evidence, effectiveBdrId]);
+
+  const handleRemoveEvidence = useCallback(async (day: number) => {
+    if (!effectiveBdrId) return;
+
+    const newEvidenceState = { ...evidence };
+    delete newEvidenceState[day];
+    setEvidence(newEvidenceState);
+
+    setSaving(true);
+    try {
+      await updateEvidence(effectiveBdrId, newEvidenceState);
+    } catch (error) {
+      console.error('Error removing evidence:', error);
+    } finally {
+      setSaving(false);
+    }
+  }, [evidence, effectiveBdrId]);
 
   const handleNavigateToCert = useCallback((day: number, weekNum: number) => {
     setCurrentWeek(Math.max(1, Math.min(9, weekNum - 1)));
     setTimeout(() => { setFlippedDays(prev => ({ ...prev, [day]: true })); }, 300);
   }, []);
-
-  const handleResetProgress = useCallback(() => {
-    if (window.confirm('Are you sure you want to reset all progress? This cannot be undone.')) {
-      clearActivities();
-      clearEvidence();
-    }
-  }, [clearActivities, clearEvidence]);
 
   const weeks = [];
   for (let w = 1; w <= 12; w++) {
@@ -76,23 +158,68 @@ const BDROnboardingCalendar: React.FC = () => {
 
   const getWeekRange = () => weeks.slice(Math.max(1, currentWeek) - 1, Math.min(12, currentWeek + 3));
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-400">Loading onboarding data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isManager && !effectiveBdrId) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <Users size={48} className="text-slate-600 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-white mb-2">Select a BDR</h2>
+          <p className="text-slate-400 mb-6">Choose a BDR to view their onboarding progress</p>
+          <BDRSelector selectedBdrId={null} onSelectBdr={onSelectBdr} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-white p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">BDR Onboarding & Enablement</h1>
-            <p className="text-slate-400">SQA Services • Foundation to Full Ramp</p>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold text-white">BDR Onboarding & Enablement</h1>
+              {saving && <span className="text-xs text-slate-400 flex items-center gap-1"><div className="w-3 h-3 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" /> Saving...</span>}
+            </div>
+            <div className="flex items-center gap-2 text-slate-400">
+              {isManager ? (
+                <>
+                  <span>Viewing:</span>
+                  <span className="text-emerald-400 font-medium">{targetBdrName}</span>
+                </>
+              ) : (
+                <span>Welcome, {userProfile.name}</span>
+              )}
+            </div>
           </div>
-          <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800 self-start md:self-auto">
-            <button onClick={() => setView('calendar')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${view === 'calendar' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-              <CalendarIcon size={16} /> Onboarding Track
-            </button>
-            <button onClick={() => setView('guide')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${view === 'guide' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-              <BookOpen size={16} /> Manager's Guide
+
+          <div className="flex items-center gap-3">
+            {isManager && <BDRSelector selectedBdrId={targetBdrId} onSelectBdr={onSelectBdr} />}
+
+            <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
+              <button onClick={() => setView('calendar')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${view === 'calendar' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                <CalendarIcon size={16} /> Onboarding Track
+              </button>
+              <button onClick={() => setView('guide')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${view === 'guide' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                <BookOpen size={16} /> Manager's Guide
+              </button>
+            </div>
+
+            <button onClick={onSignOut} className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors" title="Sign Out">
+              <LogOut size={20} />
             </button>
           </div>
         </div>
@@ -101,7 +228,6 @@ const BDROnboardingCalendar: React.FC = () => {
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <ProgressOverview overallProgress={overallProgress} phaseProgress={phaseProgress} phases={phases} />
 
-            {/* Phase Legend */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
               {phases.map((phase, idx) => (
                 <div key={idx} className="flex items-center gap-2 bg-slate-900 rounded-lg p-3 border border-slate-800">
@@ -114,7 +240,6 @@ const BDROnboardingCalendar: React.FC = () => {
               ))}
             </div>
 
-            {/* Navigation */}
             <div className="flex items-center justify-between mb-6 sticky top-0 bg-slate-950/90 backdrop-blur-sm z-20 py-4 border-b border-slate-800/50">
               <button onClick={() => setCurrentWeek(Math.max(1, currentWeek - 4))} disabled={currentWeek <= 1}
                 className="flex items-center gap-2 px-4 py-2 bg-slate-800 rounded-lg hover:bg-slate-700 disabled:opacity-50 transition-colors">
@@ -127,7 +252,6 @@ const BDROnboardingCalendar: React.FC = () => {
               </button>
             </div>
 
-            {/* Calendar Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               {getWeekRange().map((weekData) => (
                 <WeekCard key={weekData.week} weekData={weekData} weekProgress={getWeekProgress(weekData.days)}
@@ -138,7 +262,6 @@ const BDROnboardingCalendar: React.FC = () => {
               ))}
             </div>
 
-            {/* Activity Targets */}
             <div className="bg-slate-900 rounded-xl p-6 mb-8 border border-slate-800">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <Target size={20} className="text-emerald-400" /> Activity Targets by Phase
@@ -156,7 +279,6 @@ const BDROnboardingCalendar: React.FC = () => {
 
             <CertificationTimeline certifications={certifications} completedActivities={completedActivities} onNavigateToCert={handleNavigateToCert} />
 
-            {/* Daily Rhythm */}
             <div className="bg-slate-900 rounded-xl p-6 border border-slate-800">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <CalendarIcon size={20} className="text-blue-400" /> Daily Rhythm (Post-Ramp)
@@ -176,13 +298,13 @@ const BDROnboardingCalendar: React.FC = () => {
                 ))}
               </div>
             </div>
-
-            <div className="mt-8 text-center pb-8">
-              <button onClick={handleResetProgress} className="text-sm text-slate-500 hover:text-red-400 transition-colors">Reset All Progress</button>
-            </div>
           </div>
         ) : (
-          <ManagerGuide />
+          <ManagerGuide
+            userId={userId}
+            targetBdrId={effectiveBdrId || ''}
+            isManager={isManager}
+          />
         )}
       </div>
     </div>
