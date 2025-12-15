@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Target, Users, Phone, CheckCircle, Calendar as CalendarIcon, BookOpen, LogOut } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Target, Users, Phone, CheckCircle, Calendar as CalendarIcon, BookOpen, LogOut, LayoutDashboard } from 'lucide-react';
 import { certifications, phases, activityTargets } from '../data';
 import { ActivityState, CertificationEvidence } from '../types';
 import { useProgress } from '../hooks';
@@ -10,6 +10,7 @@ import WeekCard from './WeekCard';
 import CertificationTimeline from './CertificationTimeline';
 import ManagerGuide from './ManagerGuide';
 import BDRSelector from './BDRSelector';
+import ManagerDashboard from './ManagerDashboard';
 
 interface BDROnboardingCalendarProps {
   userId: string;
@@ -23,7 +24,7 @@ interface BDROnboardingCalendarProps {
 const BDROnboardingCalendar: React.FC<BDROnboardingCalendarProps> = ({
   userId, userProfile, targetBdrId, targetBdrName, onSelectBdr, onSignOut
 }) => {
-  const [view, setView] = useState<'calendar' | 'guide'>('calendar');
+  const [view, setView] = useState<'calendar' | 'guide' | 'dashboard'>(userProfile.role === 'manager' ? 'dashboard' : 'calendar');
   const [flippedDays, setFlippedDays] = useState<Record<number, boolean>>({});
   const [currentWeek, setCurrentWeek] = useState(1);
   const [completedActivities, setCompletedActivities] = useState<ActivityState>({});
@@ -169,17 +170,9 @@ const BDROnboardingCalendar: React.FC<BDROnboardingCalendarProps> = ({
     );
   }
 
-  if (isManager && !effectiveBdrId) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="text-center">
-          <Users size={48} className="text-slate-600 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-white mb-2">Select a BDR</h2>
-          <p className="text-slate-400 mb-6">Choose a BDR to view their onboarding progress</p>
-          <BDRSelector selectedBdrId={null} onSelectBdr={onSelectBdr} />
-        </div>
-      </div>
-    );
+  // If manager hasn't selected a BDR and view needs one (calendar/guide), show dashboard
+  if (isManager && !effectiveBdrId && view !== 'dashboard') {
+    setView('dashboard');
   }
 
   return (
@@ -208,13 +201,19 @@ const BDROnboardingCalendar: React.FC<BDROnboardingCalendarProps> = ({
             {isManager && <BDRSelector selectedBdrId={targetBdrId} onSelectBdr={onSelectBdr} />}
 
             <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
+              {isManager && (
+                <button onClick={() => setView('dashboard')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${view === 'dashboard' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                  <LayoutDashboard size={16} /> Dashboard
+                </button>
+              )}
               <button onClick={() => setView('calendar')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${view === 'calendar' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-                <CalendarIcon size={16} /> Onboarding Track
+                <CalendarIcon size={16} /> {isManager ? 'BDR View' : 'Onboarding'}
               </button>
               <button onClick={() => setView('guide')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${view === 'guide' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-                <BookOpen size={16} /> Manager's Guide
+                <BookOpen size={16} /> Guide
               </button>
             </div>
 
@@ -299,6 +298,8 @@ const BDROnboardingCalendar: React.FC<BDROnboardingCalendarProps> = ({
               </div>
             </div>
           </div>
+        ) : view === 'dashboard' && isManager ? (
+          <ManagerDashboard onSelectBdr={(id, name) => { onSelectBdr(id, name); setView('calendar'); }} />
         ) : (
           <ManagerGuide
             userId={userId}
