@@ -230,10 +230,10 @@ const BDROnboardingCalendar: React.FC<BDROnboardingCalendarProps> = ({
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
               {phases.map((phase, idx) => (
-                <div key={idx} className="flex items-center gap-2 bg-slate-900 rounded-lg p-3 border border-slate-800">
-                  <div className={`w-3 h-3 rounded-full ${phase.color} flex-shrink-0`}></div>
-                  <div>
-                    <div className="text-xs font-medium text-white truncate">{phase.name}</div>
+                <div key={idx} className="flex items-start gap-2 bg-slate-900 rounded-lg p-3 border border-slate-800 min-w-0">
+                  <div className={`w-3 h-3 rounded-full ${phase.color} flex-shrink-0 mt-0.5`}></div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-medium text-white leading-tight">{phase.name}</div>
                     <div className="text-xs text-slate-500">{phase.week ? `Week ${phase.week}` : `Weeks ${phase.weeks}`}</div>
                   </div>
                 </div>

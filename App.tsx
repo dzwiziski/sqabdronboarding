@@ -1,14 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import BDROnboardingCalendar from './components/BDROnboardingCalendar';
 import Login from './components/Login';
+import OnboardingWizard from './components/OnboardingWizard';
+import { getBDROnboardingData } from './services/firestoreService';
 
 const AppContent: React.FC = () => {
   const { user, userProfile, loading, signOut } = useAuth();
   const [selectedBdrId, setSelectedBdrId] = useState<string | null>(null);
   const [selectedBdrName, setSelectedBdrName] = useState<string>('');
+  const [hasStartDate, setHasStartDate] = useState<boolean | null>(null);
+  const [checkingStartDate, setCheckingStartDate] = useState(false);
 
-  if (loading) {
+  // Check if BDR has set their start date
+  useEffect(() => {
+    const checkStartDate = async () => {
+      if (user && userProfile?.role === 'bdr') {
+        setCheckingStartDate(true);
+        try {
+          const data = await getBDROnboardingData(user.uid);
+          setHasStartDate(!!data?.startDate);
+        } catch (error) {
+          console.error('Error checking start date:', error);
+          setHasStartDate(true); // Assume they have one to avoid blocking
+        } finally {
+          setCheckingStartDate(false);
+        }
+      }
+    };
+    checkStartDate();
+  }, [user, userProfile]);
+
+  if (loading || checkingStartDate) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center">
@@ -21,6 +44,17 @@ const AppContent: React.FC = () => {
 
   if (!user || !userProfile) {
     return <Login />;
+  }
+
+  // Show onboarding wizard for BDRs who haven't set start date
+  if (userProfile.role === 'bdr' && hasStartDate === false) {
+    return (
+      <OnboardingWizard
+        userId={user.uid}
+        userName={userProfile.name}
+        onComplete={() => setHasStartDate(true)}
+      />
+    );
   }
 
   const targetBdrId = userProfile.role === 'manager' ? selectedBdrId : user.uid;

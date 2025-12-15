@@ -23,6 +23,7 @@ export interface UserProfile {
 }
 
 export interface BDROnboardingData {
+    startDate: Timestamp | null;  // NEW: BDR's start date
     completedActivities: ActivityState;
     evidence: Record<string, CertificationEvidence>;
     createdAt: Timestamp;
@@ -137,6 +138,7 @@ export async function updateEvidence(
         await updateDoc(docRef, { evidence, updatedAt: serverTimestamp() });
     } else {
         await setDoc(docRef, {
+            startDate: null,
             completedActivities: {},
             evidence,
             createdAt: serverTimestamp(),
@@ -145,7 +147,28 @@ export async function updateEvidence(
     }
 }
 
+export async function setStartDate(bdrUserId: string, startDate: Date): Promise<void> {
+    const docRef = doc(db, 'bdrOnboarding', bdrUserId);
+    const existing = await getDoc(docRef);
+
+    if (existing.exists()) {
+        await updateDoc(docRef, {
+            startDate: Timestamp.fromDate(startDate),
+            updatedAt: serverTimestamp()
+        });
+    } else {
+        await setDoc(docRef, {
+            startDate: Timestamp.fromDate(startDate),
+            completedActivities: {},
+            evidence: {},
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        });
+    }
+}
+
 // ============ MANAGER NOTES ============
+
 
 export async function getManagerNotes(managerId: string, bdrUserId: string): Promise<ManagerNotesData | null> {
     const docRef = doc(db, 'managerNotes', managerId, 'bdrs', bdrUserId);
