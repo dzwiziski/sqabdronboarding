@@ -1,21 +1,28 @@
+```typescript
 import { db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export const AVAILABLE_MODELS = {
     gemini: [
-        { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash (Experimental)', speed: 'Fastest', quality: 'Good', cost: 'Free' },
-        { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', speed: 'Fast', quality: 'Good', cost: '$' },
-        { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', speed: 'Medium', quality: 'Best', cost: '$$' },
+        { id: 'gemini-3-pro', name: 'Gemini 3 Pro (Preview)', speed: 'Medium', quality: 'Best', cost: '$$$' },
+        { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', speed: 'Medium', quality: 'Excellent', cost: '$$' },
+        { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', speed: 'Fast', quality: 'Great', cost: '$' },
+        { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash-Lite', speed: 'Fastest', quality: 'Good', cost: 'Free' },
+        { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Legacy)', speed: 'Medium', quality: 'Good', cost: '$$' },
+        { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Legacy)', speed: 'Fast', quality: 'Good', cost: '$' },
     ],
     openai: [
         { id: 'gpt-4o-mini', name: 'GPT-4o Mini', speed: 'Fast', quality: 'Good', cost: '$' },
     ]
 } as const;
 
-export type ModelId =
-    | 'gemini-2.0-flash-exp'
-    | 'gemini-1.5-flash'
+export type ModelId = 
+    | 'gemini-3-pro'
+    | 'gemini-2.5-pro'
+    | 'gemini-2.5-flash'
+    | 'gemini-2.5-flash-lite'
     | 'gemini-1.5-pro'
+    | 'gemini-1.5-flash'
     | 'gpt-4o-mini';
 
 export interface AIConfig {
@@ -24,7 +31,7 @@ export interface AIConfig {
 }
 
 const DEFAULT_CONFIG: AIConfig = {
-    selectedModel: 'gemini-1.5-pro',
+    selectedModel: 'gemini-2.5-flash',
     provider: 'gemini'
 };
 

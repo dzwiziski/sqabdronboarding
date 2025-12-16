@@ -1,11 +1,15 @@
 import { db } from './firebase';
 import { collection, addDoc, query, where, getDocs, Timestamp, orderBy, limit } from 'firebase/firestore';
 
-// Model pricing per 1M tokens (USD)
+// Model pricing per 1M tokens (USD) - estimated based on tier
 const MODEL_PRICING = {
-    'gemini-2.0-flash-exp': { input: 0.00, output: 0.00 }, // Free during preview
-    'gemini-1.5-flash': { input: 0.075, output: 0.30 },
+    'gemini-3-pro': { input: 2.50, output: 10.00 }, // Estimated premium pricing
+    'gemini-2.5-pro': { input: 1.25, output: 5.00 },
+    'gemini-2.5-flash': { input: 0.075, output: 0.30 },
+    'gemini-2.5-flash-lite': { input: 0.00, output: 0.00 }, // Free tier
     'gemini-1.5-pro': { input: 1.25, output: 5.00 },
+    'gemini-1.5-flash': { input: 0.075, output: 0.30 },
+    'gemini-2.0-flash-exp': { input: 0.00, output: 0.00 }, // Free during preview
     'gemini-1.5-pro-latest': { input: 1.25, output: 5.00 }, // Alias
     'gemini-1.5-flash-latest': { input: 0.075, output: 0.30 }, // Alias
     'gpt-4o-mini': { input: 0.15, output: 0.60 },
