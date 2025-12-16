@@ -1,10 +1,17 @@
 // AI Service supporting multiple LLM providers (Gemini, OpenAI)
+import { logAIUsage, type AIFeature, type AIModel } from './aiUsageService';
 
 type LLMProvider = 'gemini' | 'openai';
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 const LLM_PROVIDER = (import.meta.env.VITE_LLM_PROVIDER as LLMProvider) || 'gemini';
+
+interface LLMResponse {
+    text: string;
+    inputTokens: number;
+    outputTokens: number;
+}
 
 export interface CoachingRecommendation {
     priority: 'high' | 'medium' | 'low';
@@ -22,14 +29,14 @@ export interface BDRProgressData {
     progressPercentage: number;
 }
 
-// Gemini API call
-async function callGemini(prompt: string, systemPrompt?: string): Promise<string> {
+// Gemini API call with token tracking
+async function callGemini(prompt: string, systemPrompt?: string): Promise<LLMResponse> {
     if (!GEMINI_API_KEY) throw new Error('Gemini API key not configured');
 
     const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
 
     const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro-latest:generateContent?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=${GEMINI_API_KEY}`,
         {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -46,11 +53,15 @@ async function callGemini(prompt: string, systemPrompt?: string): Promise<string
     }
 
     const data = await response.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const inputTokens = data.usageMetadata?.promptTokenCount || 0;
+    const outputTokens = data.usageMetadata?.candidatesTokenCount || 0;
+
+    return { text, inputTokens, outputTokens };
 }
 
-// OpenAI API call
-async function callOpenAI(prompt: string, systemPrompt?: string): Promise<string> {
+// OpenAI API call with token tracking
+async function callOpenAI(prompt: string, systemPrompt?: string): Promise<LLMResponse> {
     if (!OPENAI_API_KEY) throw new Error('OpenAI API key not configured');
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -76,16 +87,40 @@ async function callOpenAI(prompt: string, systemPrompt?: string): Promise<string
     }
 
     const data = await response.json();
-    return data.choices[0]?.message?.content || '';
+    const text = data.choices[0]?.message?.content || '';
+    const inputTokens = data.usage?.prompt_tokens || 0;
+    const outputTokens = data.usage?.completion_tokens || 0;
+
+    return { text, inputTokens, outputTokens };
 }
 
-// Unified LLM call using configured provider
-async function callLLM(prompt: string, systemPrompt?: string): Promise<string> {
+// Unified LLM call using configured provider with usage tracking
+async function callLLM(
+    prompt: string,
+    systemPrompt: string | undefined,
+    feature: AIFeature,
+    userId: string = 'system'
+): Promise<string> {
+    const startTime = Date.now();
     const provider = getActiveProvider();
+
+    let result: LLMResponse;
+    let model: AIModel;
+
     if (provider === 'openai') {
-        return callOpenAI(prompt, systemPrompt);
+        result = await callOpenAI(prompt, systemPrompt);
+        model = 'gpt-4o-mini';
+    } else {
+        result = await callGemini(prompt, systemPrompt);
+        model = 'gemini-1.5-pro';
     }
-    return callGemini(prompt, systemPrompt);
+
+    const latencyMs = Date.now() - startTime;
+
+    // Log usage asynchronously (don't await to avoid slowing down response)
+    logAIUsage(userId, feature, model, result.inputTokens, result.outputTokens, latencyMs).catch(console.error);
+
+    return result.text;
 }
 
 // Parse JSON from LLM response (handles markdown code blocks)
@@ -122,7 +157,7 @@ Return ONLY a JSON array (no markdown):
 [{"priority": "high|medium|low", "title": "Brief title", "description": "Why this matters", "action": "Specific action"}]`;
 
     try {
-        const response = await callLLM(userPrompt, systemPrompt);
+        const response = await callLLM(userPrompt, systemPrompt, 'coaching', 'system');
         const jsonStr = parseJSONResponse(response);
         const jsonMatch = jsonStr.match(/\[[\s\S]*\]/);
         return jsonMatch ? JSON.parse(jsonMatch[0]) : [];
@@ -145,7 +180,7 @@ Suggest top 3 priorities and brief reasoning.
 Return ONLY JSON (no markdown): {"priorities": ["Activity 1", "Activity 2", "Activity 3"], "reasoning": "Brief explanation"}`;
 
     try {
-        const response = await callLLM(userPrompt, systemPrompt);
+        const response = await callLLM(userPrompt, systemPrompt, 'advice', 'system');
         const jsonStr = parseJSONResponse(response);
         const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
         return jsonMatch ? JSON.parse(jsonMatch[0]) : { priorities: [], reasoning: '' };
