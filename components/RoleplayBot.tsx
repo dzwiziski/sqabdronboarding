@@ -46,8 +46,13 @@ const RoleplayBot: React.FC = () => {
         try {
             const response = await roleplayChat(scenario, messages, userMessage);
             setMessages([...newMessages, { role: 'prospect', content: response }]);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Roleplay error:', error);
+            // Show error to user
+            setMessages([...newMessages, {
+                role: 'prospect',
+                content: `[Error: ${error.message || 'Failed to get response. Please check your API key and try again.'}]`
+            }]);
         } finally {
             setSending(false);
         }
@@ -233,8 +238,8 @@ const RoleplayBot: React.FC = () => {
                         >
                             <div
                                 className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm ${msg.role === 'user'
-                                        ? 'bg-purple-600 text-white rounded-br-md'
-                                        : 'bg-slate-800 text-slate-200 rounded-bl-md'
+                                    ? 'bg-purple-600 text-white rounded-br-md'
+                                    : 'bg-slate-800 text-slate-200 rounded-bl-md'
                                     }`}
                             >
                                 {msg.content}
