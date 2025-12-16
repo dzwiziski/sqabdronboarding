@@ -36,7 +36,7 @@ async function callGemini(prompt: string, systemPrompt?: string): Promise<LLMRes
     const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
 
     const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`,
         {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -112,7 +112,7 @@ async function callLLM(
         model = 'gpt-4o-mini';
     } else {
         result = await callGemini(prompt, systemPrompt);
-        model = 'gemini-1.5-pro';
+        model = 'gemini-1.5-flash-latest';
     }
 
     const latencyMs = Date.now() - startTime;
