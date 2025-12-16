@@ -146,26 +146,26 @@ const SuperadminDashboard: React.FC = () => {
             </div>
 
             {/* Tab Navigation */}
-            <div className="flex gap-2 border-b border-slate-800">
+            <div className="flex gap-2 border-b border-slate-800 overflow-x-auto pb-1 -mx-2 px-2">
                 <button
                     onClick={() => setActiveTab('users')}
-                    className={`flex items-center gap-2 px-4 py-2 font-medium transition-colors border-b-2 ${activeTab === 'users'
-                        ? 'text-blue-400 border-blue-400'
-                        : 'text-slate-400 border-transparent hover:text-white'
+                    className={`flex items-center gap-2 px-3 sm:px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === 'users'
+                            ? 'text-blue-400 border-blue-400'
+                            : 'text-slate-400 border-transparent hover:text-white'
                         }`}
                 >
                     <Users size={18} />
-                    User Management
+                    <span className="hidden sm:inline">User Management</span>
                 </button>
                 <button
                     onClick={() => setActiveTab('ai-settings')}
-                    className={`flex items-center gap-2 px-4 py-2 font-medium transition-colors border-b-2 ${activeTab === 'ai-settings'
-                        ? 'text-blue-400 border-blue-400'
-                        : 'text-slate-400 border-transparent hover:text-white'
+                    className={`flex items-center gap-2 px-3 sm:px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === 'ai-settings'
+                            ? 'text-blue-400 border-blue-400'
+                            : 'text-slate-400 border-transparent hover:text-white'
                         }`}
                 >
                     <Settings size={18} />
-                    AI Settings
+                    <span className="hidden sm:inline">AI Settings</span>
                 </button>
             </div>
 
@@ -176,9 +176,9 @@ const SuperadminDashboard: React.FC = () => {
                 <>
 
                     {/* Filters */}
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2">
                         {['all', 'superadmin', 'manager', 'bdr'].map(f => (
-                            <button key={f} onClick={() => setFilter(f as any)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === f ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}>
+                            <button key={f} onClick={() => setFilter(f as any)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${filter === f ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}>
                                 {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
                                 {f !== 'all' && <span className="ml-1 text-xs">({users.filter(u => u.profile.role === f).length})</span>}
                             </button>
@@ -186,7 +186,7 @@ const SuperadminDashboard: React.FC = () => {
                     </div>
 
                     {/* Users Table */}
-                    <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+                    <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-x-auto">
                         <table className="w-full">
                             <thead className="bg-slate-800/50 border-b border-slate-700">
                                 <tr>
