@@ -30,13 +30,13 @@ export interface BDRProgressData {
 }
 
 // Gemini API call with token tracking
-async function callGemini(prompt: string, systemPrompt?: string): Promise<LLMResponse> {
+async function callGemini(prompt: string, systemPrompt: string | undefined, modelId: string): Promise<LLMResponse> {
     if (!GEMINI_API_KEY) throw new Error('Gemini API key not configured');
 
     const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
 
     const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${GEMINI_API_KEY}`,
         {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -102,17 +102,23 @@ async function callLLM(
     userId: string = 'system'
 ): Promise<string> {
     const startTime = Date.now();
-    const provider = getActiveProvider();
+
+    // CRITICAL: Get the model from config - DO NOT hardcode!
+    const { getAIConfig } = await import('./aiConfigService');
+    const config = await getAIConfig();
+    const selectedModelId = config.selectedModel;
 
     let result: LLMResponse;
     let model: AIModel;
 
-    if (provider === 'openai') {
+    // Determine provider from model ID
+    if (selectedModelId.startsWith('gpt')) {
         result = await callOpenAI(prompt, systemPrompt);
-        model = 'gpt-4o-mini';
+        model = selectedModelId as AIModel;
     } else {
-        result = await callGemini(prompt, systemPrompt);
-        model = 'gemini-1.5-flash-latest';
+        // Use the SELECTED model, not a hardcoded one
+        result = await callGemini(prompt, systemPrompt, selectedModelId);
+        model = selectedModelId as AIModel;
     }
 
     const latencyMs = Date.now() - startTime;
