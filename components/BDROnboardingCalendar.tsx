@@ -222,10 +222,12 @@ const BDROnboardingCalendar: React.FC<BDROnboardingCalendarProps> = ({
                 className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${view === 'practice' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
                 <MessageSquare size={16} /> Practice
               </button>
-              <button onClick={() => setView('guide')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${view === 'guide' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-                <BookOpen size={16} /> Guide
-              </button>
+              {isManager && (
+                <button onClick={() => setView('guide')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${view === 'guide' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                  <BookOpen size={16} /> Guide
+                </button>
+              )}
             </div>
 
             <button onClick={onSignOut} className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors" title="Sign Out">
