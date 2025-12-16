@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, Edit2, Trash2, Shield, RefreshCw, X, Eye, EyeOff } from 'lucide-react';
+import { Users, Plus, Edit2, Trash2, Shield, RefreshCw, X, Eye, EyeOff, Calendar } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getAllUsers, updateUserProfile, deleteUserProfile, UserProfile } from '../services/firestoreService';
+import { getNextMonday } from '../utils/dateUtils';
 
 interface UserWithId {
     id: string;
@@ -17,7 +18,14 @@ const SuperadminDashboard: React.FC = () => {
     const [editingUser, setEditingUser] = useState<UserWithId | null>(null);
 
     // Form state
-    const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'bdr' as 'bdr' | 'manager', managerId: '' });
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        password: '',
+        role: 'bdr' as 'bdr' | 'manager',
+        managerId: '',
+        startDate: getNextMonday(new Date()).toISOString().split('T')[0]
+    });
     const [showPassword, setShowPassword] = useState(false);
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -52,10 +60,18 @@ const SuperadminDashboard: React.FC = () => {
                 formData.password,
                 formData.name,
                 formData.role,
-                formData.role === 'bdr' ? formData.managerId || null : null
+                formData.role === 'bdr' ? formData.managerId || null : null,
+                formData.role === 'bdr' && formData.startDate ? new Date(formData.startDate + 'T00:00:00') : null
             );
             setShowCreateModal(false);
-            setFormData({ name: '', email: '', password: '', role: 'bdr', managerId: '' });
+            setFormData({
+                name: '',
+                email: '',
+                password: '',
+                role: 'bdr',
+                managerId: '',
+                startDate: getNextMonday(new Date()).toISOString().split('T')[0]
+            });
             await loadUsers();
         } catch (err: any) {
             setError(err.message || 'Failed to create user');
@@ -217,13 +233,29 @@ const SuperadminDashboard: React.FC = () => {
                                 </select>
                             </div>
                             {formData.role === 'bdr' && (
-                                <div>
-                                    <label className="block text-sm text-slate-400 mb-1">Assign Manager</label>
-                                    <select value={formData.managerId} onChange={e => setFormData({ ...formData, managerId: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500">
-                                        <option value="">No Manager</option>
-                                        {managers.map(m => <option key={m.id} value={m.id}>{m.profile.name}</option>)}
-                                    </select>
-                                </div>
+                                <>
+                                    <div>
+                                        <label className="block text-sm text-slate-400 mb-1">Assign Manager</label>
+                                        <select value={formData.managerId} onChange={e => setFormData({ ...formData, managerId: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500">
+                                            <option value="">No Manager</option>
+                                            {managers.map(m => <option key={m.id} value={m.id}>{m.profile.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm text-slate-400 mb-1 flex items-center gap-2">
+                                            <Calendar size={14} />
+                                            Start Date
+                                        </label>
+                                        <input
+                                            type="date"
+                                            required
+                                            value={formData.startDate}
+                                            onChange={e => setFormData({ ...formData, startDate: e.target.value })}
+                                            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                                        />
+                                        <p className="text-xs text-slate-500 mt-1">Recommended: Start on a Monday</p>
+                                    </div>
+                                </>
                             )}
                             {error && <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">{error}</div>}
                             <div className="flex gap-3">

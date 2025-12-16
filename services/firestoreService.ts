@@ -72,8 +72,21 @@ export async function updateUserProfile(
 }
 
 export async function deleteUserProfile(userId: string): Promise<void> {
+    // Delete user profile from Firestore
     const userRef = doc(db, 'users', userId);
     await deleteDoc(userRef);
+
+    // Delete BDR onboarding data if exists
+    const bdrDataRef = doc(db, 'bdrOnboarding', userId);
+    const bdrDataSnap = await getDoc(bdrDataRef);
+    if (bdrDataSnap.exists()) {
+        await deleteDoc(bdrDataRef);
+    }
+
+    // Note: Firebase client SDK cannot delete other users' Firebase Auth accounts
+    // Only the signed-in user can delete their own account
+    // To fully delete users including auth, you'd need Firebase Admin SDK on a backend
+    console.warn(`User ${userId} deleted from Firestore. Note: Firebase Auth account remains (limitation of client SDK).`);
 }
 
 export async function getAllUsers(): Promise<{ id: string; profile: UserProfile }[]> {

@@ -37,6 +37,7 @@ const AppContent: React.FC = () => {
   const [selectedBdrId, setSelectedBdrId] = useState<string | null>(null);
   const [selectedBdrName, setSelectedBdrName] = useState<string>('');
   const [hasStartDate, setHasStartDate] = useState<boolean | null>(null);
+  const [superadminView, setSuperadminView] = useState<'users' | 'dashboard'>('users');
   const [checkingStartDate, setCheckingStartDate] = useState(false);
 
   useEffect(() => {
@@ -79,8 +80,6 @@ const AppContent: React.FC = () => {
 
   // Superadmin view - has access to everything
   if (userProfile.role === 'superadmin') {
-    const [superadminView, setSuperadminView] = useState<'users' | 'dashboard'>('users');
-
     return (
       <div className="min-h-screen bg-slate-950 text-white p-6">
         <div className="max-w-7xl mx-auto">
@@ -110,10 +109,15 @@ const AppContent: React.FC = () => {
             <SuperadminDashboard />
           ) : (
             <BDROnboardingCalendar
-              userRole="manager"
               userId={user.uid}
-              selectedBdrId={selectedBdrId}
-              onBdrSelect={setSelectedBdrId}
+              userProfile={userProfile}
+              targetBdrId={selectedBdrId}
+              targetBdrName={selectedBdrName}
+              onSelectBdr={(id, name) => {
+                setSelectedBdrId(id);
+                setSelectedBdrName(name);
+              }}
+              onSignOut={signOut}
             />
           )}
         </div>
