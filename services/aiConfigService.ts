@@ -1,4 +1,3 @@
-```typescript
 import { db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
@@ -16,7 +15,7 @@ export const AVAILABLE_MODELS = {
     ]
 } as const;
 
-export type ModelId = 
+export type ModelId =
     | 'gemini-3-pro'
     | 'gemini-2.5-pro'
     | 'gemini-2.5-flash'
