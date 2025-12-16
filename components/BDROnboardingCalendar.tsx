@@ -179,60 +179,63 @@ const BDROnboardingCalendar: React.FC<BDROnboardingCalendarProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-6">
+    <div className="min-h-screen bg-slate-950 text-white p-3 sm:p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold text-white">BDR Onboarding & Enablement</h1>
-              {saving && <span className="text-xs text-slate-400 flex items-center gap-1"><div className="w-3 h-3 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" /> Saving...</span>}
-            </div>
-            <div className="flex items-center gap-2 text-slate-400">
-              {isManager ? (
-                <>
-                  <span>Viewing:</span>
-                  <span className="text-emerald-400 font-medium">{targetBdrName}</span>
-                </>
-              ) : (
-                <span>Welcome, {userProfile.name}</span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {isManager && <BDRSelector selectedBdrId={targetBdrId} onSelectBdr={onSelectBdr} />}
-
-            <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
-              {isManager && (
-                <button onClick={() => setView('dashboard')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${view === 'dashboard' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-                  <LayoutDashboard size={16} /> Dashboard
-                </button>
-              )}
-              <button onClick={() => setView('calendar')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${view === 'calendar' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-                <CalendarIcon size={16} /> {isManager ? 'BDR View' : 'Onboarding'}
-              </button>
-              <button onClick={() => setView('calls')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${view === 'calls' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-                <Mic size={16} /> Calls
-              </button>
-              <button onClick={() => setView('practice')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${view === 'practice' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-                <MessageSquare size={16} /> Practice
-              </button>
-              {isManager && (
-                <button onClick={() => setView('guide')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${view === 'guide' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-                  <BookOpen size={16} /> Guide
-                </button>
-              )}
+        <div className="flex flex-col gap-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">BDR Onboarding</h1>
+                {saving && <span className="text-xs text-slate-400 flex items-center gap-1"><div className="w-3 h-3 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" /> Saving...</span>}
+              </div>
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
+                {isManager ? (
+                  <>
+                    <span className="hidden sm:inline">Viewing:</span>
+                    <span className="text-emerald-400 font-medium">{targetBdrName}</span>
+                  </>
+                ) : (
+                  <span>{userProfile.name}</span>
+                )}
+              </div>
             </div>
 
             <button onClick={onSignOut} className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors" title="Sign Out">
               <LogOut size={20} />
             </button>
+          </div>
+
+          <div className="flex items-center gap-3 overflow-x-auto pb-2 -mx-2 px-2">
+            {isManager && <BDRSelector selectedBdrId={targetBdrId} onSelectBdr={onSelectBdr} />}
+
+            {/* Mobile-friendly navigation with horizontal scroll */}
+            <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800 min-w-max">
+              {isManager && (
+                <button onClick={() => setView('dashboard')}
+                  className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${view === 'dashboard' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                  <LayoutDashboard size={16} /><span className="hidden sm:inline">Dashboard</span>
+                </button>
+              )}
+              <button onClick={() => setView('calendar')}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${view === 'calendar' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                <CalendarIcon size={16} /><span className="hidden sm:inline">{isManager ? 'BDR View' : 'Calendar'}</span>
+              </button>
+              <button onClick={() => setView('calls')}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${view === 'calls' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                <Mic size={16} /><span className="hidden sm:inline">Calls</span>
+              </button>
+              <button onClick={() => setView('practice')}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${view === 'practice' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                <MessageSquare size={16} /><span className="hidden sm:inline">Practice</span>
+              </button>
+              {isManager && (
+                <button onClick={() => setView('guide')}
+                  className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${view === 'guide' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                  <BookOpen size={16} /><span className="hidden sm:inline">Guide</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
